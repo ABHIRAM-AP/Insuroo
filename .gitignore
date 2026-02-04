@@ -1,0 +1,7 @@
+.env
+myvenv
+env/
+filestruct.md
+
+
+/data/*
