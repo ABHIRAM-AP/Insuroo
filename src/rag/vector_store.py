@@ -30,7 +30,7 @@ class VectorStoreManager:
     return vectorstore
   def load_vectorstore(self):
         """Load existing vector database"""
-        print(f"📂 Loading existing vector database...")
+        print(f"Loading existing vector database...")
 
         vectorstore = Chroma(
             persist_directory=self.persist_directory,
