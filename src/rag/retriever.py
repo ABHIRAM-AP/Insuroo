@@ -1,8 +1,11 @@
+from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_classic.chains import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 import os
+
+load_dotenv()
 
 class InsuranceRAG:
     """RAG Retriever System"""
@@ -54,10 +57,3 @@ CONTEXT:
                 for doc in result.get("context", [])
             ]
         }
-
-        print(f"\n💡 ANSWER:\n{answer}")
-        print(f"\n📚 Sources: {len(sources)} chunks used")
-        print("="*60)
-
-        return result
-
