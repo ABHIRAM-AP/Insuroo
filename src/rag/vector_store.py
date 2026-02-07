@@ -10,7 +10,7 @@ class VectorStoreManager:
 
     print(f"Loading Embedding models")
     self.embeddingModel = GoogleGenerativeAIEmbeddings(
-    model="models/embedding-001"
+    model="gemini-3-pro-preview"
 )
   def create_vectorstore(self,chunks):
     vectorstore = Chroma.from_documents(

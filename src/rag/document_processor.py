@@ -79,12 +79,3 @@ if __name__ == "__main__":
     print(f"Source: {chunks[0].metadata.get('source')}")
     print(f"Content: {chunks[0].page_content[:200]}.......")
 
-"""
-    For testing load documents function
-        # for i, doc in enumerate(documents):
-        #     print(f"\n📄 Document {i + 1}")
-        #     print(f"Source: {doc.metadata.get('source', 'Unknown')}")
-        #     print(f"Content preview: {doc.page_content[:100]}")
-        #     print(f"Content length: {len(doc.page_content)}")
-
-"""
