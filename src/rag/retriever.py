@@ -1,57 +1,55 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-from langchain.schema import Document
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_classic.chains import create_retrieval_chain
+from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 import os
-from typing import List, Dict
 
+class InsuranceRAG:
+    """RAG Retriever System"""
 
-class InsuraceRAG:
-    def __init__(
-        self,
-        vectorstore,
-        api_key: str = None,
-        model_name: str = "gemini-1.5-flash-latest",
-        temperature: float = 0.3,
-        max_token: int = 500,
-        num_chunks: int = 3,
-    ):
-        print("\n" + "=" * 60)
-        print("🤖 INITIALIZING RAG SYSTEM")
-        print("=" * 60)
+    def __init__(self, vectorstore, api_key=None):
         self.vectorstore = vectorstore
-        self.num_chunks = num_chunks
 
+        if api_key is None:
+            api_key = os.environ['GEMINI_API_KEY']
+
+        # Initialize Gemini
         self.llm = ChatGoogleGenerativeAI(
-            model=model_name,
+            model="gemini-3-pro-preview", 
             google_api_key=api_key,
-            temperature=temperature,
-            max_tokens=max_token,
+            temperature=0.3
         )
-        print("LLM INITIALIZED\n")
 
-        self._create_prompt_template()
-        self._build_chain()
-        print("\n" + "=" * 60)
-        print("✅ RAG SYSTEM READY!")
-        print("=" * 60)
+        # Create prompt
+        system_msg = """You are an insurance advisor for rural India.
+Use ONLY the context to answer. Explain in simple language.
 
-def _create_prompt_template():
-    template = """You are a helpful and knowledgeable insurance advisor for rural India.
-Your goal is to help people understand insurance schemes in simple, clear language.
+CONTEXT:
+{context}"""
 
-IMPORTANT INSTRUCTIONS:
-1. Use ONLY the context provided below to answer
-2. If the context doesn't contain enough information, say "I don't have enough information about that in the documents"
-3. Explain in simple language - avoid jargon
-4. If you use technical terms, explain them in simple words
-5. Be specific - mention scheme names, amounts, eligibility clearly
-6. Keep answers concise but complete
+        self.prompt = ChatPromptTemplate.from_messages([
+            ("system", system_msg),
+            ("human", "{input}")
+        ])
 
-CONTEXT FROM INSURANCE DOCUMENTS:
-{context}
+        # Build chain
+        self.retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+        doc_chain = create_stuff_documents_chain(self.llm, self.prompt)
+        self.rag_chain = create_retrieval_chain(self.retriever, doc_chain)
 
-QUESTION: {question}
+        print("✅ RAG system ready!")
 
-HELPFUL ANSWER IN SIMPLE LANGUAGE:"""
-        
+    def query(self, question):
+        print(f"\n❓ {question}")
+        print("="*60)
+
+        result = self.rag_chain.invoke({"input": question})
+        answer = result.get("answer", "No answer")
+        sources = result.get("context", [])
+
+        print(f"\n💡 ANSWER:\n{answer}")
+        print(f"\n📚 Sources: {len(sources)} chunks used")
+        print("="*60)
+
+        return result
+
