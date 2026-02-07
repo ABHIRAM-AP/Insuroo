@@ -40,12 +40,20 @@ CONTEXT:
         print("✅ RAG system ready!")
 
     def query(self, question):
-        print(f"\n❓ {question}")
-        print("="*60)
-
         result = self.rag_chain.invoke({"input": question})
-        answer = result.get("answer", "No answer")
+        
         sources = result.get("context", [])
+
+        return {
+            "answer":result.get("answer", "No answer"),
+            "sources":[
+                {
+                    "source": doc.metadata.get("source", "unknown"),
+                    "page": doc.metadata.get("page", "N/A")
+                }
+                for doc in result.get("context", [])
+            ]
+        }
 
         print(f"\n💡 ANSWER:\n{answer}")
         print(f"\n📚 Sources: {len(sources)} chunks used")
