@@ -20,7 +20,7 @@ rag = InsuranceRAG(
 )
 
 
-@app.post("/ask",response_model=AnswerResponse)
+@app.post("/query/ask",response_model=AnswerResponse)
 def ask_question(req:QuestionRequest):
 
     result=rag.query(req.question)
