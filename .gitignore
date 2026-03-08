@@ -4,4 +4,5 @@ env/
 filestruct.md
 
 
-/data/*
+data/chroma_db/
+data/insurance_docs
