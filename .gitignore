@@ -5,4 +5,6 @@ filestruct.md
 
 
 
-data/insurance_docs
+data/insurance_docs/
+frontend
+test.py
