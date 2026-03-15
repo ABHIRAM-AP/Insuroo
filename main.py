@@ -8,6 +8,7 @@ import tempfile
 
 from src.voice.whisper_stt import WhisperSTT
 from src.voice.sarvam_tts import SarvamTTS
+from src.voice.groq_stt import GroqSTT
 
 from src.rag import VectorStoreManager, InsuranceRAG
 from data.models.qa_model import QuestionRequest, AnswerResponse
@@ -15,13 +16,14 @@ from data.models.qa_model import QuestionRequest, AnswerResponse
 load_dotenv()
 
 rag = None
-stt: WhisperSTT = None
+stt_local: WhisperSTT = None
+stt_cloud: GroqSTT = None
 tts: SarvamTTS = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global rag, stt, tts
+    global rag, stt_local, stt_cloud, tts
 
     vector_store_manager = VectorStoreManager()
     vector_store = vector_store_manager.load_vectorstore()
@@ -34,8 +36,13 @@ async def lifespan(app: FastAPI):
     )
 
     # Initialize voice components
-    print("🎙️ Initializing Whisper STT...")
-    stt = WhisperSTT(model_name="base")
+    groq_key = os.getenv("GROQ_API_KEY")
+    if groq_key:
+        print("🎙️ Initializing Groq STT (Cloud)...")
+        stt_cloud = GroqSTT(api_key=groq_key)
+    else:
+        print("🎙️ Initializing Whisper STT (Local)...")
+        stt_local = WhisperSTT(model_name="base")
 
     print("🔊 Initializing Sarvam TTS...")
     tts = SarvamTTS()
@@ -81,7 +88,10 @@ async def transcribe_audio(file: UploadFile = File(...)):
         tmp_path = tmp.name
 
     try:
-        result = stt.transcribe(tmp_path, language="hi")
+        if stt_cloud:
+            result = stt_cloud.transcribe(tmp_path, language="hi")
+        else:
+            result = stt_local.transcribe(tmp_path, language="hi")
     finally:
         os.remove(tmp_path)
 
