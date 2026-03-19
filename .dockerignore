@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+env/
+venv/
+myvenv/
+build/
+dist/
+
+# Flutter (Frontend)
+frontend/
+
+# Local data / caches
+.git/
+.gitignore
+.vscode/
+
+# Environment
+.env
+
+# ChromaDB local data (if you want to build a fresh image)
+# data/chroma_db/
