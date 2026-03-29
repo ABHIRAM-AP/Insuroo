@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
 import tempfile
+import threading
 
 from src.voice.whisper_stt import WhisperSTT
 from src.voice.sarvam_tts import SarvamTTS
@@ -15,46 +16,88 @@ from data.models.qa_model import QuestionRequest, AnswerResponse
 
 load_dotenv()
 
+# ---------------- GLOBALS ---------------- #
 rag = None
+is_loading = False
+
 stt_local: WhisperSTT = None
 stt_cloud: GroqSTT = None
 tts: SarvamTTS = None
 
 
+# ---------------- RAG LOADER ---------------- #
+def load_rag():
+    global rag, is_loading
+
+    if rag is not None:
+        return rag
+
+    if is_loading:
+        return None
+
+    is_loading = True
+    print("📦 Loading vector store...")
+
+    try:
+        vector_store_manager = VectorStoreManager()
+        vector_store = vector_store_manager.load_vectorstore()
+
+        print("📦 Vector store count:", vector_store._collection.count())
+
+        rag = InsuranceRAG(
+            vectorstore=vector_store,
+            api_key=os.getenv("GEMINI_API_KEY")
+        )
+
+        print("✅ RAG Loaded")
+
+    except Exception as e:
+        print("❌ Error loading RAG:", str(e))
+        rag = None
+
+    finally:
+        is_loading = False
+
+    return rag
+
+
+# ---------------- BACKGROUND PRELOAD ---------------- #
+def preload_rag():
+    print("🚀 Background RAG preload started...")
+    load_rag()
+
+
+# ---------------- LIFESPAN ---------------- #
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global rag, stt_local, stt_cloud, tts
+    global stt_local, stt_cloud, tts
 
-    vector_store_manager = VectorStoreManager()
-    vector_store = vector_store_manager.load_vectorstore()
+    print("⚡ FastAPI starting...")
 
-    print("📦 Vector store count:", vector_store._collection.count())
-
-    rag = InsuranceRAG(
-        vectorstore=vector_store,
-        api_key=os.getenv("GEMINI_API_KEY")
-    )
-
-    # Initialize voice components
+    # Initialize STT
     groq_key = os.getenv("GROQ_API_KEY")
     if groq_key:
-        print("🎙️ Initializing Groq STT (Cloud)...")
+        print("🎙️ Using Groq STT (Cloud)")
         stt_cloud = GroqSTT(api_key=groq_key)
     else:
-        print("🎙️ Initializing Whisper STT (Local)...")
+        print("🎙️ Using Whisper STT (Local)")
         stt_local = WhisperSTT(model_name="base")
 
+    # Initialize TTS
     print("🔊 Initializing Sarvam TTS...")
     tts = SarvamTTS()
 
-    yield  # app runs here
+    # Start background RAG loading (NON-BLOCKING)
+    threading.Thread(target=preload_rag, daemon=True).start()
+
+    yield
 
     print("🛑 Shutting down API")
 
 
+# ---------------- APP INIT ---------------- #
 app = FastAPI(lifespan=lifespan)
 
-# Allow Flutter app (any origin in dev) to call the API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -63,26 +106,36 @@ app.add_middleware(
 )
 
 
-@app.post("/query/ask", response_model=AnswerResponse)
-def ask_question(req: QuestionRequest):
-    result = rag.query(req.question)
-    return {"answer": result["answer"]}
-
-
+# ---------------- HEALTH ---------------- #
 @app.get("/health")
 def root():
     return {"status": "API is running"}
 
 
+# ---------------- TEXT RAG ---------------- #
+@app.post("/query/ask", response_model=AnswerResponse)
+def ask_question(req: QuestionRequest):
+    global rag
+
+    if rag is None:
+        rag_instance = load_rag()
+
+        if rag_instance is None:
+            return {
+                "answer": "⏳ Model is warming up, please try again in a few seconds"
+            }
+    else:
+        rag_instance = rag
+
+    result = rag_instance.query(req.question)
+    return {"answer": result["answer"]}
+
+
+# ---------------- VOICE STT ---------------- #
 @app.post("/voice/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
-    """
-    Accepts a WAV audio file upload.
-    Returns the transcribed text using Whisper STT.
-    """
     contents = await file.read()
 
-    # Write to a temp WAV file for Whisper
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
         tmp.write(contents)
         tmp_path = tmp.name
@@ -101,18 +154,15 @@ async def transcribe_audio(file: UploadFile = File(...)):
     return {"text": result["text"], "language": result["language"]}
 
 
+# ---------------- VOICE TTS ---------------- #
 @app.post("/voice/speak")
 def speak_text(req: dict):
-    """
-    Accepts {"text": "..."}.
-    Returns WAV audio bytes synthesized by Sarvam TTS.
-    """
     text = req.get("text", "")
+
     if not text.strip():
         return Response(content=b"", media_type="audio/wav")
 
-    # Sarvam TTS synthesizes to a temp file — read bytes and return them
-    audio_path = tts.synthesize(text[:450])  # first chunk only; Flutter handles long text
+    audio_path = tts.synthesize(text[:450])
 
     try:
         with open(audio_path, "rb") as f:
