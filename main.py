@@ -7,12 +7,13 @@ import os
 import tempfile
 import threading
 
-from src.voice.whisper_stt import WhisperSTT
 from src.voice.sarvam_tts import SarvamTTS
 from src.voice.groq_stt import GroqSTT
 
 from src.rag import VectorStoreManager, InsuranceRAG
+from src.recommendation.recommender import PolicyRecommender
 from data.models.qa_model import QuestionRequest, AnswerResponse
+from data.models.user_profile import UserProfile, RecommendationResponse
 
 load_dotenv()
 
@@ -20,7 +21,6 @@ load_dotenv()
 rag = None
 is_loading = False
 
-stt_local: WhisperSTT = None
 stt_cloud: GroqSTT = None
 tts: SarvamTTS = None
 
@@ -80,15 +80,19 @@ async def lifespan(app: FastAPI):
         print("🎙️ Using Groq STT (Cloud)")
         stt_cloud = GroqSTT(api_key=groq_key)
     else:
-        print("🎙️ Using Whisper STT (Local)")
-        stt_local = WhisperSTT(model_name="base")
+        print("❌ Groq API Key missing. Cloud STT will not work.")
 
     # Initialize TTS
     print("🔊 Initializing Sarvam TTS...")
     tts = SarvamTTS()
 
-    # Start background RAG loading (NON-BLOCKING)
-    threading.Thread(target=preload_rag, daemon=True).start()
+    # Optimization: Skip preloading in DEV_MODE to speed up reloads
+    dev_mode = os.getenv("DEV_MODE", "false").lower() == "true"
+    if dev_mode:
+        print("🚀 [DEV_MODE] Skipping background RAG preload (will lazy load on first request)")
+    else:
+        # Start background RAG loading (NON-BLOCKING) in production
+        threading.Thread(target=preload_rag, daemon=True).start()
 
     yield
 
@@ -131,6 +135,29 @@ def ask_question(req: QuestionRequest):
     return {"answer": result["answer"]}
 
 
+# ---------------- RECOMMENDATION ---------------- #
+@app.post("/query/recommend", response_model=RecommendationResponse)
+def recommend_policies(profile: UserProfile):
+    global rag
+
+    if rag is None:
+        rag_instance = load_rag()
+
+        if rag_instance is None:
+            return {
+                "user_name": profile.name,
+                "recommendations": [],
+                "summary": "⏳ Thinking... Our recommendation engine is warming up. Please try again in a few seconds."
+            }
+    else:
+        rag_instance = rag
+
+    recommender = PolicyRecommender(rag_instance)
+    result = recommender.recommend(profile)
+
+    return result
+
+
 # ---------------- VOICE STT ---------------- #
 @app.post("/voice/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
@@ -144,7 +171,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
         if stt_cloud:
             result = stt_cloud.transcribe(tmp_path, language="hi")
         else:
-            result = stt_local.transcribe(tmp_path, language="hi")
+            result = {"success": False, "error": "Cloud STT not configured"}
     finally:
         os.remove(tmp_path)
 
