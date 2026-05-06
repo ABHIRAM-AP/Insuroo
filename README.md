@@ -1,4 +1,4 @@
-# 🛡️ Insuroo
+#  Insuroo
 
 **Insuroo** is an AI-powered insurance assistant backend built with FastAPI. It helps users query insurance policy information through a Retrieval-Augmented Generation (RAG) pipeline and get personalized policy recommendations — all accessible via text or voice (speech-to-text and text-to-speech).
 
@@ -6,16 +6,16 @@
 
 ## ✨ Features
 
-- 🤖 **RAG-based Q&A** — Ask questions about insurance policies and get accurate, context-aware answers powered by Google Gemini and ChromaDB.
-- 📋 **Policy Recommendations** — Submit a user profile and receive tailored insurance policy suggestions.
-- 🎙️ **Voice Transcription (STT)** — Upload audio files and get transcriptions via Groq's cloud Speech-to-Text API (supports Hindi and more).
-- 🔊 **Text-to-Speech (TTS)** — Convert text answers into audio using Sarvam AI's TTS service.
-- ⚡ **Background Preloading** — The RAG vector store loads in a background thread at startup (skippable in dev mode for faster reloads).
-- 🌐 **CORS Enabled** — Ready for integration with any frontend.
+-  **RAG-based Q&A** — Ask questions about insurance policies and get accurate, context-aware answers powered by Google Gemini and ChromaDB.
+-  **Policy Recommendations** — Submit a user profile and receive tailored insurance policy suggestions.
+-  **Voice Transcription (STT)** — Upload audio files and get transcriptions via Groq's cloud Speech-to-Text API (supports Hindi and more).
+-  **Text-to-Speech (TTS)** — Convert text answers into audio using Sarvam AI's TTS service.
+-  **Background Preloading** — The RAG vector store loads in a background thread at startup (skippable in dev mode for faster reloads).
+-  **CORS Enabled** — Ready for integration with any frontend.
 
 ---
 
-## 🗂️ Project Structure
+##  Project Structure
 
 ```
 Insuroo/
@@ -39,7 +39,7 @@ Insuroo/
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -174,7 +174,7 @@ Convert text to speech and return a `.wav` audio file.
 
 ---
 
-## 📝 Environment Variables Reference
+##  Environment Variables Reference
 
 | Variable | Description | Required |
 |---|---|---|
