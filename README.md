@@ -71,7 +71,7 @@ Create a `.env` file in the project root:
 GEMINI_API_KEY=your_google_gemini_api_key
 GROQ_API_KEY=your_groq_api_key
 SARVAM_API_KEY=your_sarvam_api_key   # if required by sarvam_tts
-DEV_MODE=false                        # set to true to skip background RAG preload
+
 ```
 
 ### 4. Run the server
@@ -81,14 +81,9 @@ DEV_MODE=false                        # set to true to skip background RAG prelo
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-**Development (faster reloads, lazy RAG loading):**
-```bash
-DEV_MODE=true python run_dev.py
-```
-
 ---
 
-## 📡 API Endpoints
+##  API Endpoints
 
 ### `GET /health`
 Returns the health status of the API.
@@ -194,6 +189,3 @@ Pull requests are welcome! For major changes, please open an issue first to disc
 
 ---
 
-## 📄 License
-
-This project is open source. See the repository for license details.
