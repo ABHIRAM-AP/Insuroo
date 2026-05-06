@@ -23,13 +23,17 @@ Insuroo/
 ├── run_dev.py               # Dev-mode runner
 ├── requirements.txt         # Python dependencies
 ├── .env                     # Environment variables (not committed)
-├── config/                  # Configuration files
+├── config/
+          ├── config.py                   # Configuration files
 ├── data/
 │   └── models/
 │       ├── qa_model.py      # Pydantic models for Q&A requests/responses
 │       └── user_profile.py  # Pydantic models for user profile & recommendations
 └── src/
-    ├── rag.py               # VectorStoreManager & InsuranceRAG (ChromaDB + Gemini)
+    ├── rag                   # VectorStoreManager & InsuranceRAG (ChromaDB + Gemini)
+          ├── document_processor.py
+          ├── retriever.py                
+          ├── vector_store.py                
     ├── recommendation/
     │   └── recommender.py   # PolicyRecommender logic
     └── voice/
